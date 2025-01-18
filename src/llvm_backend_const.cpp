@@ -875,7 +875,20 @@ gb_internal lbValue lb_const_value(lbModule *m, Type *type, ExactValue value, bo
 
 				res.value = lb_build_constant_array_values(m, type, elem_type, cast(isize)type->Array.count, values, allow_local, is_rodata);
 				return res;
-			} else {
+			}
+			// Compound is of array item type; expand its value to all items in array.
+			else if (value.value_compound->tav.type == elem_type) {
+				LLVMValueRef* values = gb_alloc_array(temporary_allocator(), LLVMValueRef, cast(isize)type->Array.count);
+
+				for (isize i = 0; i < type->Array.count; i++) {
+					values[i] = lb_const_value(m, elem_type, value, allow_local, is_rodata).value;
+				}
+
+				res.value = lb_build_constant_array_values(m, type, elem_type, cast(isize)type->Array.count, values, allow_local, is_rodata);
+				return res;
+			}
+			// Assume that compound value is an array literal
+			else {
 				GB_ASSERT_MSG(elem_count == type->Array.count, "%td != %td", elem_count, type->Array.count);
 
 				LLVMValueRef *values = gb_alloc_array(temporary_allocator(), LLVMValueRef, cast(isize)type->Array.count);
